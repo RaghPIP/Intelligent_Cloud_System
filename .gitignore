@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+
+# Conda
+.conda/
+
+# Local data and large archives (not tracked)
+data/*
+!data/.gitkeep
+archive*/
+archive (1)/
+archive (2)/
+archive (3)/
+
+# System/editor
+.DS_Store
+.vscode/

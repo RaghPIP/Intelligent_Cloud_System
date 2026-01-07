@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1 Summary Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            padding: 30px 0;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .summary-stat {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .summary-stat .number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .summary-stat .label {
+            color: #666;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="fas fa-chart-bar"></i> Phase 1: Complete Summary Report</h2>
+                    <a href="/" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Overall Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="summary-stat">
+                            <div class="number">2,235,381</div>
+                            <div class="label">Total Records Processed</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="summary-stat">
+                            <div class="number">1,942,541</div>
+                            <div class="label">Final Records</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="summary-stat">
+                            <div class="number">292,840</div>
+                            <div class="label">Records Removed (13.1%)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="summary-stat">
+                            <div class="number">112</div>
+                            <div class="label">Selected Features</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dataset Comparison Table -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-table"></i> Dataset Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Dataset</th>
+                                        <th>Original Rows</th>
+                                        <th>Final Rows</th>
+                                        <th>Rows Removed</th>
+                                        <th>Original Features</th>
+                                        <th>Final Features</th>
+                                        <th>Features Engineered</th>
+                                        <th>Features Excluded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dataset_name, dataset_info in datasets.items() %}
+                                    <tr>
+                                        <td><strong>{{ dataset_info.name }}</strong></td>
+                                        <td>{{ "{:,}".format(stats[dataset_name].original_rows) }}</td>
+                                        <td>{{ "{:,}".format(stats[dataset_name].final_rows) }}</td>
+                                        <td><span class="badge bg-danger">{{ "{:,}".format(stats[dataset_name].rows_removed) }}</span></td>
+                                        <td>{{ stats[dataset_name].original_cols }}</td>
+                                        <td><span class="badge bg-success">{{ stats[dataset_name].final_cols }}</span></td>
+                                        <td><span class="badge bg-info">{{ stats[dataset_name].features_engineered }}</span></td>
+                                        <td><span class="badge bg-warning">{{ stats[dataset_name].features_excluded }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cleaning Actions Summary -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-broom"></i> Cleaning Actions Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for dataset_name, actions in cleaning_actions.items() %}
+                        <div class="mb-4">
+                            <h6 class="text-primary">{{ datasets[dataset_name].name }}</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Column</th>
+                                            <th>Issue</th>
+                                            <th>Action</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for action in actions %}
+                                        <tr>
+                                            <td><strong>{{ action.column }}</strong></td>
+                                            <td>{{ action.issue }}</td>
+                                            <td>{{ action.action }}</td>
+                                            <td><small class="text-muted">{{ action.reason }}</small></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Feature Engineering Summary -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-magic"></i> Feature Engineering Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for dataset_name, features in features_engineered.items() %}
+                        <div class="mb-4">
+                            <h6 class="text-success">{{ datasets[dataset_name].name }} ({{ features|length }} features)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Feature Name</th>
+                                            <th>Type</th>
+                                            <th>Formula</th>
+                                            <th>Usefulness</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for feat in features %}
+                                        <tr>
+                                            <td><strong>{{ feat.feature }}</strong></td>
+                                            <td><span class="badge bg-info">{{ feat.type }}</span></td>
+                                            <td><code>{{ feat.formula }}</code></td>
+                                            <td><small>{{ feat.usefulness }}</small></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Key Achievements -->
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-trophy"></i> Key Achievements</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        Removed 292,840 duplicate records (13.1% of total)
+                                    </li>
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        Handled 213 missing values in CIC-IDS-2017
+                                    </li>
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        Engineered 9 new features across all datasets
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        Selected 112 optimal features (31.3% reduction)
+                                    </li>
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        All datasets are ML-ready and real-time compatible
+                                    </li>
+                                    <li class="list-group-item">
+                                        <i class="fas fa-check-circle text-success"></i> 
+                                        Features compatible with RF, IF, and LSTM models
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

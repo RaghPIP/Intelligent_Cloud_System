@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dataset_name }} - Preprocessing Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            padding: 30px 0;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .comparison-table {
+            font-size: 0.85em;
+        }
+        .comparison-table th {
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .before-data {
+            background-color: #fff3cd;
+        }
+        .after-data {
+            background-color: #d1ecf1;
+        }
+        .stat-badge {
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 5px;
+            display: inline-block;
+        }
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .action-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-database"></i> {{ dataset_name }} - Preprocessing Details
+                    </h3>
+                    <a href="/" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Statistics Overview -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-badge bg-primary text-white text-center">
+                            <div class="h4 mb-0">{{ "{:,}".format(stats.original_rows) }}</div>
+                            <small>Original Rows</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-badge bg-success text-white text-center">
+                            <div class="h4 mb-0">{{ "{:,}".format(stats.final_rows) }}</div>
+                            <small>Final Rows</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-badge bg-danger text-white text-center">
+                            <div class="h4 mb-0">{{ "{:,}".format(stats.rows_removed) }}</div>
+                            <small>Rows Removed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-badge bg-info text-white text-center">
+                            <div class="h4 mb-0">{{ stats.final_cols }}</div>
+                            <small>Final Features</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cleaning Actions -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-broom"></i> Data Cleaning Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Column</th>
+                                        <th>Issue Found</th>
+                                        <th>Action Taken</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for action in cleaning_actions %}
+                                    <tr>
+                                        <td><strong>{{ action.column }}</strong></td>
+                                        <td><span class="badge bg-warning text-dark">{{ action.issue }}</span></td>
+                                        <td>{{ action.action }}</td>
+                                        <td><small class="text-muted">{{ action.reason }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Engineering -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-magic"></i> Feature Engineering ({{ features_engineered|length }} New Features)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Feature Name</th>
+                                        <th>Type</th>
+                                        <th>Formula</th>
+                                        <th>Usefulness</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feat in features_engineered %}
+                                    <tr>
+                                        <td><strong>{{ feat.feature }}</strong></td>
+                                        <td><span class="badge bg-info">{{ feat.type }}</span></td>
+                                        <td><code>{{ feat.formula }}</code></td>
+                                        <td><small>{{ feat.usefulness }}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Before/After Data Comparison -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Before Cleaning (Sample)</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if original_sample %}
+                                <p class="text-muted">
+                                    <small>Showing {{ original_sample.data|length }} of {{ "{:,}".format(stats.original_rows) }} rows</small>
+                                </p>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered comparison-table before-data">
+                                        <thead>
+                                            <tr>
+                                                {% for col in original_sample.columns[:10] %}
+                                                <th>{{ col }}</th>
+                                                {% endfor %}
+                                                {% if original_sample.columns|length > 10 %}
+                                                <th>...</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in original_sample.data %}
+                                            <tr>
+                                                {% for col in original_sample.columns[:10] %}
+                                                <td>{{ row[col] }}</td>
+                                                {% endfor %}
+                                                {% if original_sample.columns|length > 10 %}
+                                                <td>...</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <p class="text-muted">Original data not available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-check-circle"></i> After Cleaning (Sample)</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if cleaned_sample %}
+                                <p class="text-muted">
+                                    <small>Showing {{ cleaned_sample.data|length }} of {{ "{:,}".format(stats.final_rows) }} rows</small>
+                                </p>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered comparison-table after-data">
+                                        <thead>
+                                            <tr>
+                                                {% for col in cleaned_sample.columns[:10] %}
+                                                <th>{{ col }}</th>
+                                                {% endfor %}
+                                                {% if cleaned_sample.columns|length > 10 %}
+                                                <th>...</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in cleaned_sample.data %}
+                                            <tr>
+                                                {% for col in cleaned_sample.columns[:10] %}
+                                                <td>{{ row[col] }}</td>
+                                                {% endfor %}
+                                                {% if cleaned_sample.columns|length > 10 %}
+                                                <td>...</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <p class="text-muted">Cleaned data not available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Selection Summary -->
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-filter"></i> Feature Selection Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="stat-badge bg-success text-white">
+                                    <div class="h3 mb-0">{{ stats.features_included }}</div>
+                                    <small>Features Included</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-badge bg-danger text-white">
+                                    <div class="h3 mb-0">{{ stats.features_excluded }}</div>
+                                    <small>Features Excluded</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-badge bg-primary text-white">
+                                    <div class="h3 mb-0">{{ stats.features_included + stats.features_excluded }}</div>
+                                    <small>Total Features</small>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="text-muted">
+                            <strong>Selection Criteria:</strong> Features were excluded based on high correlation (>0.95), 
+                            low variance (<1e-6), or redundancy. Included features have discriminative power, 
+                            are real-time extractable, and compatible with Random Forest, Isolation Forest, and LSTM models.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,522 @@
+================================================================================
+PHASE 1: DATA PREPROCESSING
+Intelligent Threat Detection and Response for Cloud Platforms
+================================================================================
+
+================================================================================
+DATASET INSPECTION: NSL-KDD
+================================================================================
+
+1. BASIC STATISTICS
+   Total Rows: 148,518
+   Total Columns: 42
+   Memory Usage: 78.92 MB
+
+2. COLUMN INFORMATION
+   Column Names: ['duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes', 'land', 'wrong_fragment', 'urgent', 'hot']...
+
+3. MISSING VALUES ANALYSIS
+   No missing values found!
+
+4. DUPLICATE RECORDS
+   Duplicate Rows: 1,996 (1.34%)
+
+5. DATA TYPES
+   int64: 23 columns
+   float64: 15 columns
+   object: 4 columns
+
+6. DATA PREVIEW (First 3 rows)
+  duration protocol_type service  flag  src_bytes  dst_bytes  land  wrong_fragment  urgent  hot  num_failed_logins  logged_in  num_compromised  root_shell  su_attempted  num_root  num_file_creations  num_shells  num_access_files  num_outbound_cmds  is_host_login  is_guest_login  count  srv_count  serror_rate  srv_serror_rate  rerror_rate  srv_rerror_rate  same_srv_rate  diff_srv_rate  srv_diff_host_rate  dst_host_count  dst_host_srv_count  dst_host_same_srv_rate  dst_host_diff_srv_rate  dst_host_same_src_port_rate  dst_host_srv_diff_host_rate  dst_host_serror_rate  dst_host_srv_serror_rate  dst_host_rerror_rate dst_host_srv_rerror_rate  label
+0        1             2       3     4          5          6     7               8       9   10                 11         12               13          14            15        16                  17          18                19                 20             21              22     23       24.0         25.0             26.0         27.0            28.00          29.00           30.0                  31              32               33.00                   34.00                   35.00                         36.0                         37.0                  38.0                     39.00                  40.0                       41     42
+0      tcp      ftp_data      SF   491          0          0     0               0       0    0                  0          0                0           0             0         0                   0           0                 0                  0              0               2      2        0.0          0.0              0.0          0.0             1.00           0.00            0.0                 150              25                0.17                    0.03                    0.17                          0.0                          0.0                   0.0                      0.05                   0.0                   normal     20
+0      udp         other      SF   146          0          0     0               0       0    0                  0          0                0           0             0         0                   0           0                 0                  0              0              13      1        0.0          0.0              0.0          0.0             0.08           0.15            0.0                 255               1                0.00                    0.60                    0.88                          0.0                          0.0                   0.0                      0.00                   0.0                   normal     15
+
+7. LABEL DISTRIBUTION
+   Label Column: label
+label
+21    73251
+18    23634
+20    20682
+19    11174
+15     5166
+17     4242
+16     3074
+14     1410
+12     1215
+11     1102
+13      970
+10      448
+7       367
+9       300
+6       253
+8       237
+0       189
+5       184
+3       181
+4       180
+1       149
+2       109
+42        1
+
+================================================================================
+DATA CLEANING: NSL-KDD
+================================================================================
+
+CLEANING SUMMARY:
+   Original Rows: 148,518
+   Final Rows: 146,522
+   Rows Removed: 1,996
+   Original Columns: 42
+   Final Columns: 42
+   Columns Removed: 0
+
+CLEANING ACTIONS TABLE:
+Column                    Issue                 Action                                      Reason
+   All  1,996 duplicate records Removed duplicate rows Prevent model bias toward frequent patterns
+ label Non-standard column name     Renamed to "Label"   Standardize column naming across datasets
+
+================================================================================
+FEATURE ENGINEERING: NSL-KDD
+================================================================================
+
+NEW FEATURES CREATED: 2
+            Feature        Type                     Formula                             Usefulness
+     Byte_Ratio_NSL Statistical src_bytes / (dst_bytes + 1)       Source to destination byte ratio
+Service_Count_Ratio  Behavioral     count / (srv_count + 1) Connection to service connection ratio
+
+================================================================================
+FEATURE SELECTION: NSL-KDD
+================================================================================
+
+FEATURE SELECTION SUMMARY:
+   Total Features: 43
+   Included: 34
+   Excluded: 9
+
+FEATURE SELECTION TABLE:
+                    Feature          Module   Status                                                                    Justification
+                   duration Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              protocol_type Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                    service Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                       flag Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                  dst_bytes Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                       land Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             wrong_fragment Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                     urgent Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                        hot Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+          num_failed_logins Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            num_compromised Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 root_shell Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               su_attempted Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                   num_root Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+         num_file_creations Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 num_shells Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+          num_outbound_cmds Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              is_host_login Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             is_guest_login Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            srv_rerror_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              same_srv_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              diff_srv_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+         srv_diff_host_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             dst_host_count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+         dst_host_srv_count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+     dst_host_same_srv_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+     dst_host_diff_srv_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+dst_host_same_src_port_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       dst_host_serror_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+   dst_host_srv_serror_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       dst_host_rerror_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+   dst_host_srv_rerror_rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             Byte_Ratio_NSL Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+        Service_Count_Ratio Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                serror_rate Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                rerror_rate Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+           num_access_files Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+dst_host_srv_diff_host_rate Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+            srv_serror_rate Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                      count Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                  logged_in Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                  srv_count Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                  src_bytes Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+
+================================================================================
+FINAL DATASET STRUCTURE: NSL-KDD
+================================================================================
+
+1. DATASET STATISTICS
+   Total Rows: 146,522
+   Total Columns: 35
+   Feature Columns: 34
+
+2. FEATURE CATEGORIES
+   Numeric Features: 30
+   Categorical Features: 4
+
+3. TARGET LABEL FORMAT
+   Label Column: Label
+   Unique Labels: 23
+   Label Distribution:
+Label
+21    72795
+18    23321
+20    20566
+19    11074
+15     4301
+17     4203
+16     3004
+14     1397
+12     1214
+11     1102
+13      961
+10      448
+7       363
+9       297
+6       253
+8       234
+0       189
+5       184
+3       181
+4       179
+1       148
+2       107
+42        1
+
+4. FINAL DATASET PREVIEW (First 5 rows)
+  duration protocol_type service  flag  dst_bytes  land  wrong_fragment  urgent  hot  num_failed_logins  Label
+0        1             2       3     4          6     7               8       9   10                 11     42
+0      tcp      ftp_data      SF   491          0     0               0       0    0                  0     20
+0      udp         other      SF   146          0     0               0       0    0                  0     15
+0      tcp       private      S0     0          0     0               0       0    0                  0     19
+0      tcp          http      SF   232          0     0               0       0    0                  1     21
+
+✓ Cleaned dataset saved to: data/NSL-KDD_cleaned.csv
+
+================================================================================
+DATASET INSPECTION: UNSW-NB15
+================================================================================
+
+1. BASIC STATISTICS
+   Total Rows: 257,673
+   Total Columns: 36
+   Memory Usage: 122.70 MB
+
+2. COLUMN INFORMATION
+   Column Names: ['dur', 'proto', 'service', 'state', 'spkts', 'dpkts', 'sbytes', 'dbytes', 'rate', 'sload']...
+
+3. MISSING VALUES ANALYSIS
+   No missing values found!
+
+4. DUPLICATE RECORDS
+   Duplicate Rows: 112,451 (43.64%)
+
+5. DATA TYPES
+   int64: 21 columns
+   float64: 11 columns
+   object: 4 columns
+
+6. DATA PREVIEW (First 3 rows)
+        dur proto service state  spkts  dpkts  sbytes  dbytes       rate       sload       dload  sloss  dloss     sinpkt      dinpkt          sjit          djit  swin       stcpb       dtcpb  dwin    tcprtt    synack    ackdat  smean  dmean  trans_depth  response_body_len  ct_src_dport_ltm  ct_dst_sport_ltm  is_ftp_login  ct_ftp_cmd  ct_flw_http_mthd  is_sm_ips_ports attack_cat  label
+0  0.121478   tcp       -   FIN      6      4     258     172  74.087490  14158.9420    8495.365      0      0   24.29560    8.375000     30.177547     11.830604   255   621772692  2202533631   255  0.000000  0.000000  0.000000     43     43            0                  0                 1                 1             0           0                 0                0     Normal      0
+1  0.649902   tcp       -   FIN     14     38     734   42014  78.473370   8395.1120  503571.300      2     17   49.91500   15.432865     61.426933   1387.778300   255  1417884146  3077387971   255  0.000000  0.000000  0.000000     52   1106            0                  0                 1                 1             0           0                 0                0     Normal      0
+2  1.623129   tcp       -   FIN      8     16     364   13186  14.170161   1572.2719   60929.230      1      6  231.87556  102.737206  17179.586000  11420.926000   255  2116150707  2963114973   255  0.111897  0.061458  0.050439     46    824            0                  0                 1                 1             0           0                 0                0     Normal      0
+
+7. LABEL DISTRIBUTION
+   Label Column: label
+label
+1    164673
+0     93000
+
+================================================================================
+DATA CLEANING: UNSW-NB15
+================================================================================
+
+CLEANING SUMMARY:
+   Original Rows: 257,673
+   Final Rows: 145,222
+   Rows Removed: 112,451
+   Original Columns: 36
+   Final Columns: 36
+   Columns Removed: 0
+
+CLEANING ACTIONS TABLE:
+Column                     Issue                 Action                                      Reason
+   All 112,451 duplicate records Removed duplicate rows Prevent model bias toward frequent patterns
+ label  Non-standard column name     Renamed to "Label"   Standardize column naming across datasets
+
+================================================================================
+FEATURE ENGINEERING: UNSW-NB15
+================================================================================
+
+NEW FEATURES CREATED: 4
+          Feature        Type                          Formula                                       Usefulness
+  Well_Known_Port  Behavioral         1 if port < 1024, else 0        Well-known ports targeted more in attacks
+   Ephemeral_Port  Behavioral 1 if port in 49152-65535, else 0 Ephemeral ports indicate client-side connections
+Packet_Ratio_UNSW Statistical              spkts / (dpkts + 1)               Source to destination packet ratio
+  Byte_Ratio_UNSW Statistical            sbytes / (dbytes + 1)                 Source to destination byte ratio
+
+================================================================================
+FEATURE SELECTION: UNSW-NB15
+================================================================================
+
+FEATURE SELECTION SUMMARY:
+   Total Features: 39
+   Included: 31
+   Excluded: 8
+
+FEATURE SELECTION TABLE:
+          Feature          Module   Status                                                                    Justification
+              dur Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            proto Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+          service Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            state Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           sbytes Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           dbytes Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             rate Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            sload Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            dload Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           sinpkt Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           dinpkt Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             sjit Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             djit Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            stcpb Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            dtcpb Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             dwin Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           tcprtt Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           synack Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           ackdat Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            smean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            dmean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+      trans_depth Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+response_body_len Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+ ct_src_dport_ltm Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+ ct_dst_sport_ltm Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       ct_ftp_cmd Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+ ct_flw_http_mthd Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+  is_sm_ips_ports Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       attack_cat Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+Packet_Ratio_UNSW Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+  Byte_Ratio_UNSW Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            spkts Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+             swin Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+            sloss Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+     is_ftp_login Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+            dpkts Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+            dloss Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+  Well_Known_Port Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+   Ephemeral_Port Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+
+================================================================================
+FINAL DATASET STRUCTURE: UNSW-NB15
+================================================================================
+
+1. DATASET STATISTICS
+   Total Rows: 145,222
+   Total Columns: 32
+   Feature Columns: 31
+
+2. FEATURE CATEGORIES
+   Numeric Features: 27
+   Categorical Features: 4
+
+3. TARGET LABEL FORMAT
+   Label Column: Label
+   Unique Labels: 2
+   Label Distribution:
+Label
+0    79965
+1    65257
+
+4. FINAL DATASET PREVIEW (First 5 rows)
+        dur proto service state  sbytes  dbytes       rate       sload        dload     sinpkt  Label
+0  0.121478   tcp       -   FIN     258     172  74.087490  14158.9420    8495.3650   24.29560      0
+1  0.649902   tcp       -   FIN     734   42014  78.473370   8395.1120  503571.3000   49.91500      0
+2  1.623129   tcp       -   FIN     364   13186  14.170161   1572.2719   60929.2300  231.87556      0
+3  1.681642   tcp     ftp   FIN     628     770  13.677108   2740.1790    3358.6220  152.87654      0
+4  0.449454   tcp       -   FIN     534     268  33.373825   8561.4990    3987.0598   47.75033      0
+
+✓ Cleaned dataset saved to: data/UNSW-NB15_cleaned.csv
+
+================================================================================
+DATASET INSPECTION: CIC-IDS-2017
+================================================================================
+
+1. BASIC STATISTICS
+   Total Rows: 1,829,190
+   Total Columns: 79
+   Memory Usage: 1198.66 MB
+
+2. COLUMN INFORMATION
+   Column Names: [' Destination Port', ' Flow Duration', ' Total Fwd Packets', ' Total Backward Packets', 'Total Length of Fwd Packets', ' Total Length of Bwd Packets', ' Fwd Packet Length Max', ' Fwd Packet Length Min', ' Fwd Packet Length Mean', ' Fwd Packet Length Std']...
+
+3. MISSING VALUES ANALYSIS
+   Columns with missing values: 1
+      Column  Missing Count  Missing %
+Flow Bytes/s            213   0.011644
+
+4. DUPLICATE RECORDS
+   Duplicate Rows: 178,393 (9.75%)
+
+5. DATA TYPES
+   int64: 54 columns
+   float64: 24 columns
+   object: 1 columns
+
+6. DATA PREVIEW (First 3 rows)
+    Destination Port   Flow Duration   Total Fwd Packets   Total Backward Packets  Total Length of Fwd Packets   Total Length of Bwd Packets   Fwd Packet Length Max   Fwd Packet Length Min   Fwd Packet Length Mean   Fwd Packet Length Std  Bwd Packet Length Max   Bwd Packet Length Min   Bwd Packet Length Mean   Bwd Packet Length Std  Flow Bytes/s   Flow Packets/s   Flow IAT Mean   Flow IAT Std   Flow IAT Max   Flow IAT Min  Fwd IAT Total   Fwd IAT Mean   Fwd IAT Std   Fwd IAT Max   Fwd IAT Min  Bwd IAT Total   Bwd IAT Mean   Bwd IAT Std   Bwd IAT Max   Bwd IAT Min  Fwd PSH Flags   Bwd PSH Flags   Fwd URG Flags   Bwd URG Flags   Fwd Header Length   Bwd Header Length  Fwd Packets/s   Bwd Packets/s   Min Packet Length   Max Packet Length   Packet Length Mean   Packet Length Std   Packet Length Variance  FIN Flag Count   SYN Flag Count   RST Flag Count   PSH Flag Count   ACK Flag Count   URG Flag Count   CWE Flag Count   ECE Flag Count   Down/Up Ratio   Average Packet Size   Avg Fwd Segment Size   Avg Bwd Segment Size   Fwd Header Length.1  Fwd Avg Bytes/Bulk   Fwd Avg Packets/Bulk   Fwd Avg Bulk Rate   Bwd Avg Bytes/Bulk   Bwd Avg Packets/Bulk  Bwd Avg Bulk Rate  Subflow Fwd Packets   Subflow Fwd Bytes   Subflow Bwd Packets   Subflow Bwd Bytes  Init_Win_bytes_forward   Init_Win_bytes_backward   act_data_pkt_fwd   min_seg_size_forward  Active Mean   Active Std   Active Max   Active Min  Idle Mean   Idle Std   Idle Max   Idle Min   Label
+0              54865               3                   2                        0                           12                             0                       6                       6                      6.0                     0.0                      0                       0                      0.0                     0.0  4.000000e+06     666666.66670             3.0            0.0              3              3              3            3.0           0.0             3             3              0            0.0           0.0             0             0              0               0               0               0                  40                   0  666666.666700        0.000000                   6                   6                  6.0                 0.0                      0.0               0                0                0                0                1                0                0                0               0                   9.0                    6.0                    0.0                    40                   0                      0                   0                    0                      0                  0                    2                  12                     0                   0                      33                        -1                  1                     20          0.0          0.0            0            0        0.0        0.0          0          0  BENIGN
+1              55054             109                   1                        1                            6                             6                       6                       6                      6.0                     0.0                      6                       6                      6.0                     0.0  1.100917e+05      18348.62385           109.0            0.0            109            109              0            0.0           0.0             0             0              0            0.0           0.0             0             0              0               0               0               0                  20                  20    9174.311927     9174.311927                   6                   6                  6.0                 0.0                      0.0               0                0                0                0                1                1                0                0               1                   9.0                    6.0                    6.0                    20                   0                      0                   0                    0                      0                  0                    1                   6                     1                   6                      29                       256                  0                     20          0.0          0.0            0            0        0.0        0.0          0          0  BENIGN
+2              55055              52                   1                        1                            6                             6                       6                       6                      6.0                     0.0                      6                       6                      6.0                     0.0  2.307692e+05      38461.53846            52.0            0.0             52             52              0            0.0           0.0             0             0              0            0.0           0.0             0             0              0               0               0               0                  20                  20   19230.769230    19230.769230                   6                   6                  6.0                 0.0                      0.0               0                0                0                0                1                1                0                0               1                   9.0                    6.0                    6.0                    20                   0                      0                   0                    0                      0                  0                    1                   6                     1                   6                      29                       256                  0                     20          0.0          0.0            0            0        0.0        0.0          0          0  BENIGN
+
+================================================================================
+DATA CLEANING: CIC-IDS-2017
+================================================================================
+
+CLEANING SUMMARY:
+   Original Rows: 1,829,190
+   Final Rows: 1,650,797
+   Rows Removed: 178,393
+   Original Columns: 79
+   Final Columns: 75
+   Columns Removed: 4
+
+CLEANING ACTIONS TABLE:
+      Column                                 Issue                       Action                                                     Reason
+         All             178,393 duplicate records       Removed duplicate rows                Prevent model bias toward frequent patterns
+Flow Bytes/s            198 missing values (0.01%) Filled with median (5289.11)     Preserve data distribution while handling missing data
+   Idle Mean High cardinality or identifier column               Removed column Prevent overfitting; identifiers not useful for prediction
+    Idle Std High cardinality or identifier column               Removed column Prevent overfitting; identifiers not useful for prediction
+    Idle Max High cardinality or identifier column               Removed column Prevent overfitting; identifiers not useful for prediction
+    Idle Min High cardinality or identifier column               Removed column Prevent overfitting; identifiers not useful for prediction
+
+================================================================================
+FEATURE ENGINEERING: CIC-IDS-2017
+================================================================================
+
+NEW FEATURES CREATED: 3
+               Feature       Type                          Formula                                               Usefulness
+Flag_Combination_Score Behavioral        Weighted sum of TCP flags Flag patterns indicate connection state and attack types
+       Well_Known_Port Behavioral         1 if port < 1024, else 0                Well-known ports targeted more in attacks
+        Ephemeral_Port Behavioral 1 if port in 49152-65535, else 0         Ephemeral ports indicate client-side connections
+
+================================================================================
+FEATURE SELECTION: CIC-IDS-2017
+================================================================================
+
+FEATURE SELECTION SUMMARY:
+   Total Features: 78
+   Included: 47
+   Excluded: 31
+
+FEATURE SELECTION TABLE:
+                     Feature          Module   Status                                                                    Justification
+            Destination Port Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Flow Duration Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+ Total Length of Fwd Packets Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       Fwd Packet Length Max Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       Fwd Packet Length Min Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+      Fwd Packet Length Mean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       Bwd Packet Length Max Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+       Bwd Packet Length Min Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                Flow Bytes/s Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              Flow Packets/s Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Flow IAT Mean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                Flow IAT Std Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                Flow IAT Min Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                Fwd IAT Mean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 Fwd IAT Std Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 Fwd IAT Max Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Bwd IAT Total Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                Bwd IAT Mean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 Bwd IAT Std Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 Bwd IAT Max Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Fwd URG Flags Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           Fwd Header Length Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           Bwd Header Length Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Bwd Packets/s Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           Min Packet Length Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           Max Packet Length Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+      Packet Length Variance Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              FIN Flag Count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              PSH Flag Count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              ACK Flag Count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              URG Flag Count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              ECE Flag Count Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+               Down/Up Ratio Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+         Average Packet Size Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+           Subflow Bwd Bytes Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+      Init_Win_bytes_forward Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+     Init_Win_bytes_backward Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+            act_data_pkt_fwd Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+        min_seg_size_forward Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                 Active Mean Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                  Active Std Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                  Active Max Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                  Active Min Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+                       Label Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+      Flag_Combination_Score Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+             Well_Known_Port Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+              Ephemeral_Port Network Traffic Included Discriminative power, real-time extractable, low correlation with other features
+          Packet Length Mean Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+           Packet Length Std Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                 Bwd IAT Min Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+         Subflow Bwd Packets Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+        Avg Bwd Segment Size Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                Flow IAT Max Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+               Fwd PSH Flags Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+         Fwd Header Length.1 Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+      Bwd Packet Length Mean Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+              CWE Flag Count Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+      Total Backward Packets Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+         Subflow Fwd Packets Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+           Total Fwd Packets Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+              RST Flag Count Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+ Total Length of Bwd Packets Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+        Avg Fwd Segment Size Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+               Fwd IAT Total Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+       Fwd Packet Length Std Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+           Subflow Fwd Bytes Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+       Bwd Packet Length Std Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+              SYN Flag Count Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+                 Fwd IAT Min Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+               Fwd Packets/s Network Traffic Excluded              High correlation (>0.95) with other features; redundant information
+               Bwd PSH Flags Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+               Bwd URG Flags Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+          Fwd Avg Bytes/Bulk Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+        Fwd Avg Packets/Bulk Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+           Fwd Avg Bulk Rate Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+          Bwd Avg Bytes/Bulk Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+        Bwd Avg Packets/Bulk Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+           Bwd Avg Bulk Rate Network Traffic Excluded                              Very low variance (< 1e-6); no discriminative power
+
+================================================================================
+FINAL DATASET STRUCTURE: CIC-IDS-2017
+================================================================================
+
+1. DATASET STATISTICS
+   Total Rows: 1,650,797
+   Total Columns: 47
+   Feature Columns: 47
+
+2. FEATURE CATEGORIES
+   Numeric Features: 46
+   Categorical Features: 1
+
+3. TARGET LABEL FORMAT
+
+4. FINAL DATASET PREVIEW (First 5 rows)
+    Destination Port   Flow Duration  Total Length of Fwd Packets   Fwd Packet Length Max   Fwd Packet Length Min   Fwd Packet Length Mean  Bwd Packet Length Max   Bwd Packet Length Min  Flow Bytes/s   Flow Packets/s
+0              54865               3                           12                       6                       6                      6.0                      0                       0  4.000000e+06     666666.66670
+1              55054             109                            6                       6                       6                      6.0                      6                       6  1.100917e+05      18348.62385
+2              55055              52                            6                       6                       6                      6.0                      6                       6  2.307692e+05      38461.53846
+3              46236              34                            6                       6                       6                      6.0                      6                       6  3.529412e+05      58823.52941
+4              54863               3                           12                       6                       6                      6.0                      0                       0  4.000000e+06     666666.66670
+
+✓ Cleaned dataset saved to: data/CIC-IDS-2017_cleaned.csv
+
+================================================================================
+PHASE 1 SUMMARY
+================================================================================
+
+Preprocessing completed for Network Traffic datasets.
+Web Logs and Malware datasets will be processed when available.
