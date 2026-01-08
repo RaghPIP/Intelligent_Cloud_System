@@ -11,6 +11,9 @@ env/
 # Local data and large archives (not tracked)
 data/*
 !data/.gitkeep
+!data/CIC_IDS_2017.csv
+!data/NSL_KDD.csv
+!data/UNSW_NB15.csv
 archive*/
 archive (1)/
 archive (2)/
