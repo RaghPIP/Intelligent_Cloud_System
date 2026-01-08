@@ -1,3 +1,4 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
 data/CIC_IDS_2017.csv filter=lfs diff=lfs merge=lfs -text
 data/NSL_KDD.csv filter=lfs diff=lfs merge=lfs -text
 data/UNSW_NB15.csv filter=lfs diff=lfs merge=lfs -text
