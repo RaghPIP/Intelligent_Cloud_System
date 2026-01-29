@@ -15,9 +15,35 @@ Date: 2024
 import pandas as pd
 import numpy as np
 import os
+import sys
 from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
+
+def safe_print(*args, **kwargs):
+    """Print safely on consoles with limited encodings (Windows)."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+        try:
+            safe_args = []
+            for a in args:
+                s = str(a)
+                safe_args.append(s.encode(enc, errors='replace').decode(enc))
+            sep = kwargs.get('sep', ' ')
+            end = kwargs.get('end', '\n')
+            file = kwargs.get('file', sys.stdout)
+            try:
+                file.write(sep.join(safe_args) + end)
+            except Exception:
+                # fallback to repr
+                print(*[repr(a) for a in args], **{k: v for k, v in kwargs.items() if k != 'file'})
+        except Exception:
+            try:
+                print(*[repr(a) for a in args], **{k: v for k, v in kwargs.items() if k != 'file'})
+            except Exception:
+                pass
 
 # Set display options
 pd.set_option('display.max_columns', None)
@@ -36,9 +62,9 @@ class DataPreprocessor:
         
     def inspect_dataset(self, filepath, dataset_name):
         """Inspect dataset and return statistics"""
-        print(f"\n{'='*80}")
-        print(f"DATASET INSPECTION: {dataset_name}")
-        print(f"{'='*80}")
+        safe_print(f"\n{'='*80}")
+        safe_print(f"DATASET INSPECTION: {dataset_name}")
+        safe_print(f"{'='*80}")
         
         # Load dataset
         try:
@@ -64,21 +90,21 @@ class DataPreprocessor:
                 else:
                     df = pd.read_csv(filepath, low_memory=False)
         except Exception as e:
-            print(f"Error loading {filepath}: {e}")
+            safe_print(f"Error loading {filepath}: {e}")
             return None
         
         # Basic statistics
-        print(f"\n1. BASIC STATISTICS")
-        print(f"   Total Rows: {len(df):,}")
-        print(f"   Total Columns: {len(df.columns)}")
-        print(f"   Memory Usage: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
+        safe_print(f"\n1. BASIC STATISTICS")
+        safe_print(f"   Total Rows: {len(df):,}")
+        safe_print(f"   Total Columns: {len(df.columns)}")
+        safe_print(f"   Memory Usage: {df.memory_usage(deep=True).sum() / 1024**2:.2f} MB")
         
         # Column information
-        print(f"\n2. COLUMN INFORMATION")
-        print(f"   Column Names: {list(df.columns)[:10]}..." if len(df.columns) > 10 else f"   Column Names: {list(df.columns)}")
+        safe_print(f"\n2. COLUMN INFORMATION")
+        safe_print(f"   Column Names: {list(df.columns)[:10]}..." if len(df.columns) > 10 else f"   Column Names: {list(df.columns)}")
         
         # Missing values
-        print(f"\n3. MISSING VALUES ANALYSIS")
+        safe_print(f"\n3. MISSING VALUES ANALYSIS")
         missing = df.isnull().sum()
         missing_pct = (missing / len(df)) * 100
         missing_df = pd.DataFrame({
@@ -89,43 +115,43 @@ class DataPreprocessor:
         missing_df = missing_df[missing_df['Missing Count'] > 0].sort_values('Missing Count', ascending=False)
         
         if len(missing_df) > 0:
-            print(f"   Columns with missing values: {len(missing_df)}")
-            print(missing_df.head(10).to_string(index=False))
+            safe_print(f"   Columns with missing values: {len(missing_df)}")
+            safe_print(missing_df.head(10).to_string(index=False))
         else:
-            print("   No missing values found!")
+            safe_print("   No missing values found!")
         
         # Duplicate records
-        print(f"\n4. DUPLICATE RECORDS")
+        safe_print(f"\n4. DUPLICATE RECORDS")
         duplicates = df.duplicated().sum()
         duplicate_pct = (duplicates / len(df)) * 100
-        print(f"   Duplicate Rows: {duplicates:,} ({duplicate_pct:.2f}%)")
+        safe_print(f"   Duplicate Rows: {duplicates:,} ({duplicate_pct:.2f}%)")
         
         # Data types
-        print(f"\n5. DATA TYPES")
+        safe_print(f"\n5. DATA TYPES")
         dtype_counts = df.dtypes.value_counts()
         for dtype, count in dtype_counts.items():
-            print(f"   {dtype}: {count} columns")
+            safe_print(f"   {dtype}: {count} columns")
         
         # Preview data
-        print(f"\n6. DATA PREVIEW (First 3 rows)")
-        print(df.head(3).to_string())
+        safe_print(f"\n6. DATA PREVIEW (First 3 rows)")
+        safe_print(df.head(3).to_string())
         
         # Label distribution (if label column exists)
         label_cols = [col for col in df.columns if col.lower() in ['label', 'class', 'attack', 'target']]
         if label_cols:
-            print(f"\n7. LABEL DISTRIBUTION")
+            safe_print(f"\n7. LABEL DISTRIBUTION")
             label_col = label_cols[0]
             label_dist = df[label_col].value_counts()
-            print(f"   Label Column: {label_col}")
-            print(label_dist.to_string())
+            safe_print(f"   Label Column: {label_col}")
+            safe_print(label_dist.to_string())
         
         return df
     
     def clean_network_traffic(self, df, dataset_name):
         """Clean network traffic dataset"""
-        print(f"\n{'='*80}")
-        print(f"DATA CLEANING: {dataset_name}")
-        print(f"{'='*80}")
+        safe_print(f"\n{'='*80}")
+        safe_print(f"DATA CLEANING: {dataset_name}")
+        safe_print(f"{'='*80}")
         
         original_rows = len(df)
         original_cols = len(df.columns)
@@ -215,19 +241,19 @@ class DataPreprocessor:
                 df['Label'] = df['Label'].str.strip().str.lower()
         
         # Summary
-        print(f"\nCLEANING SUMMARY:")
-        print(f"   Original Rows: {original_rows:,}")
-        print(f"   Final Rows: {len(df):,}")
-        print(f"   Rows Removed: {original_rows - len(df):,}")
-        print(f"   Original Columns: {original_cols}")
-        print(f"   Final Columns: {len(df.columns)}")
-        print(f"   Columns Removed: {original_cols - len(df.columns)}")
+        safe_print(f"\nCLEANING SUMMARY:")
+        safe_print(f"   Original Rows: {original_rows:,}")
+        safe_print(f"   Final Rows: {len(df):,}")
+        safe_print(f"   Rows Removed: {original_rows - len(df):,}")
+        safe_print(f"   Original Columns: {original_cols}")
+        safe_print(f"   Final Columns: {len(df.columns)}")
+        safe_print(f"   Columns Removed: {original_cols - len(df.columns)}")
         
         # Create cleaning log table
         if cleaning_actions:
             cleaning_df = pd.DataFrame(cleaning_actions)
-            print(f"\nCLEANING ACTIONS TABLE:")
-            print(cleaning_df.to_string(index=False))
+            safe_print(f"\nCLEANING ACTIONS TABLE:")
+            safe_print(cleaning_df.to_string(index=False))
             self.cleaning_log.append({
                 'dataset': dataset_name,
                 'actions': cleaning_df
@@ -237,9 +263,9 @@ class DataPreprocessor:
     
     def engineer_features_network(self, df, dataset_name):
         """Engineer new features for network traffic"""
-        print(f"\n{'='*80}")
-        print(f"FEATURE ENGINEERING: {dataset_name}")
-        print(f"{'='*80}")
+        safe_print(f"\n{'='*80}")
+        safe_print(f"FEATURE ENGINEERING: {dataset_name}")
+        safe_print(f"{'='*80}")
         
         new_features = []
         
@@ -394,10 +420,10 @@ class DataPreprocessor:
                 'Usefulness': 'Connection to service connection ratio'
             })
         
-        print(f"\nNEW FEATURES CREATED: {len(new_features)}")
+        safe_print(f"\nNEW FEATURES CREATED: {len(new_features)}")
         if new_features:
             features_df = pd.DataFrame(new_features)
-            print(features_df.to_string(index=False))
+            safe_print(features_df.to_string(index=False))
             self.feature_engineering_log.append({
                 'dataset': dataset_name,
                 'features': features_df
@@ -407,9 +433,9 @@ class DataPreprocessor:
     
     def select_features_network(self, df, dataset_name):
         """Select features for network traffic with justifications"""
-        print(f"\n{'='*80}")
-        print(f"FEATURE SELECTION: {dataset_name}")
-        print(f"{'='*80}")
+        safe_print(f"\n{'='*80}")
+        safe_print(f"FEATURE SELECTION: {dataset_name}")
+        safe_print(f"{'='*80}")
         
         # Identify features to exclude
         excluded_features = []
@@ -480,14 +506,14 @@ class DataPreprocessor:
         all_features = included_features + excluded_features
         selection_df = pd.DataFrame(all_features)
         
-        print(f"\nFEATURE SELECTION SUMMARY:")
-        print(f"   Total Features: {len(remaining_features) + len([e['Feature'] for e in excluded_features])}")
-        print(f"   Included: {len(included_features)}")
-        print(f"   Excluded: {len(excluded_features)}")
+        safe_print(f"\nFEATURE SELECTION SUMMARY:")
+        safe_print(f"   Total Features: {len(remaining_features) + len([e['Feature'] for e in excluded_features])}")
+        safe_print(f"   Included: {len(included_features)}")
+        safe_print(f"   Excluded: {len(excluded_features)}")
         
         if len(selection_df) > 0:
-            print(f"\nFEATURE SELECTION TABLE:")
-            print(selection_df.to_string(index=False))
+            safe_print(f"\nFEATURE SELECTION TABLE:")
+            safe_print(selection_df.to_string(index=False))
             self.feature_selection_log.append({
                 'dataset': dataset_name,
                 'selection': selection_df
@@ -497,16 +523,16 @@ class DataPreprocessor:
     
     def generate_final_structure(self, df, dataset_name):
         """Generate final cleaned dataset structure"""
-        print(f"\n{'='*80}")
-        print(f"FINAL DATASET STRUCTURE: {dataset_name}")
-        print(f"{'='*80}")
+        safe_print(f"\n{'='*80}")
+        safe_print(f"FINAL DATASET STRUCTURE: {dataset_name}")
+        safe_print(f"{'='*80}")
         
-        print(f"\n1. DATASET STATISTICS")
-        print(f"   Total Rows: {len(df):,}")
-        print(f"   Total Columns: {len(df.columns)}")
-        print(f"   Feature Columns: {len(df.columns) - (1 if 'Label' in df.columns else 0)}")
+        safe_print(f"\n1. DATASET STATISTICS")
+        safe_print(f"   Total Rows: {len(df):,}")
+        safe_print(f"   Total Columns: {len(df.columns)}")
+        safe_print(f"   Feature Columns: {len(df.columns) - (1 if 'Label' in df.columns else 0)}")
         
-        print(f"\n2. FEATURE CATEGORIES")
+        safe_print(f"\n2. FEATURE CATEGORIES")
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
         
@@ -515,20 +541,20 @@ class DataPreprocessor:
         if 'Label' in categorical_cols:
             categorical_cols.remove('Label')
         
-        print(f"   Numeric Features: {len(numeric_cols)}")
-        print(f"   Categorical Features: {len(categorical_cols)}")
+        safe_print(f"   Numeric Features: {len(numeric_cols)}")
+        safe_print(f"   Categorical Features: {len(categorical_cols)}")
         
-        print(f"\n3. TARGET LABEL FORMAT")
+        safe_print(f"\n3. TARGET LABEL FORMAT")
         if 'Label' in df.columns:
             label_dist = df['Label'].value_counts()
-            print(f"   Label Column: Label")
-            print(f"   Unique Labels: {df['Label'].nunique()}")
-            print(f"   Label Distribution:")
-            print(label_dist.to_string())
+            safe_print(f"   Label Column: Label")
+            safe_print(f"   Unique Labels: {df['Label'].nunique()}")
+            safe_print(f"   Label Distribution:")
+            safe_print(label_dist.to_string())
         
-        print(f"\n4. FINAL DATASET PREVIEW (First 5 rows)")
+        safe_print(f"\n4. FINAL DATASET PREVIEW (First 5 rows)")
         preview_cols = list(df.columns[:10]) + (['Label'] if 'Label' in df.columns else [])
-        print(df[preview_cols].head(5).to_string())
+        safe_print(df[preview_cols].head(5).to_string())
         
         return {
             'rows': len(df),
@@ -540,10 +566,10 @@ class DataPreprocessor:
 
 def main():
     """Main execution function"""
-    print("="*80)
-    print("PHASE 1: DATA PREPROCESSING")
-    print("Intelligent Threat Detection and Response for Cloud Platforms")
-    print("="*80)
+    safe_print("="*80)
+    safe_print("PHASE 1: DATA PREPROCESSING")
+    safe_print("Intelligent Threat Detection and Response for Cloud Platforms")
+    safe_print("="*80)
     
     preprocessor = DataPreprocessor(data_dir='data')
     
@@ -558,7 +584,7 @@ def main():
     # Filter out already processed files and cleaned files
     csv_files = [f for f in csv_files if '_cleaned' not in f.name and '-cleaned' not in f.name]
     
-    print(f"\nFound {len(csv_files)} CSV file(s) to process: {[f.name for f in csv_files]}")
+    safe_print(f"\nFound {len(csv_files)} CSV file(s) to process: {[f.name for f in csv_files]}")
     
     # Add all CSV files found
     for csv_file in csv_files:
@@ -572,7 +598,7 @@ def main():
         network_datasets[dataset_name] = str(csv_file)
     
     if not network_datasets:
-        print("\nNo CSV files found in data/ folder. Please upload datasets first.")
+        safe_print("\nNo CSV files found in data/ folder. Please upload datasets first.")
         return preprocessor, {}
     
     processed_datasets = {}
@@ -580,7 +606,7 @@ def main():
     for name, filepath in network_datasets.items():
         filepath = Path(filepath)
         if not filepath.exists():
-            print(f"\nWarning: {filepath} not found. Skipping {name}.")
+            safe_print(f"\nWarning: {filepath} not found. Skipping {name}.")
             continue
         
         # 1. Inspection
@@ -607,15 +633,15 @@ def main():
         # Save cleaned dataset
         output_path = f'data/{name}_cleaned.csv'
         df_final.to_csv(output_path, index=False)
-        print(f"\n✓ Cleaned dataset saved to: {output_path}")
-    
+        safe_print(f"\n[OK] Cleaned dataset saved to: {output_path}")
+
     # Generate summary report
-    print(f"\n{'='*80}")
-    print("PHASE 1 SUMMARY")
-    print(f"{'='*80}")
-    
-    print("\nPreprocessing completed for Network Traffic datasets.")
-    print("Web Logs and Malware datasets will be processed when available.")
+    safe_print(f"\n{'='*80}")
+    safe_print("PHASE 1 SUMMARY")
+    safe_print(f"{'='*80}")
+
+    safe_print("\nPreprocessing completed for Network Traffic datasets.")
+    safe_print("Web Logs and Malware datasets will be processed when available.")
     
     return preprocessor, processed_datasets
 

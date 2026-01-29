@@ -2,6 +2,7 @@
 """
 Flask Web Application for Phase 1 Data Preprocessing Visualization
 Enhanced with file upload and preprocessing functionality
+Also integrates Module 2: Web Intrusion Detection System (WIDS)
 """
 
 from flask import Flask, Response, request, jsonify, redirect, url_for
@@ -10,16 +11,19 @@ from pathlib import Path
 import os
 import subprocess
 import json
+import sys
 from werkzeug.utils import secure_filename
 import threading
 import time
+from module2_web_intrusion_detection import WebIntrusionDetectionSystem
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'data'
+# Use an absolute path for the data directory to avoid cwd/OS issues (Windows/OneDrive)
+DATA_DIR = Path(app.root_path) / 'data'
+app.config['UPLOAD_FOLDER'] = str(DATA_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 5000 * 1024 * 1024  # 5GB max file size
 app.config['ALLOWED_EXTENSIONS'] = {'csv', 'txt'}
 
-DATA_DIR = Path('data')
 DATA_DIR.mkdir(exist_ok=True)
 
 # Global state for preprocessing status
@@ -96,8 +100,34 @@ def load_sample_data(dataset_name, data_type='original', n_rows=5):
             'shape': df.shape
         }
     except Exception as e:
-        print(f"Error loading {dataset_name}: {e}")
+        safe_print(f"Error loading {dataset_name}: {e}")
         return None
+
+
+def safe_print(*args, **kwargs):
+    """Print safely on consoles with limited encodings (Windows)."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+        try:
+            safe_args = []
+            for a in args:
+                s = str(a)
+                safe_args.append(s.encode(enc, errors='replace').decode(enc))
+            sep = kwargs.get('sep', ' ')
+            end = kwargs.get('end', '\n')
+            file = kwargs.get('file', sys.stdout)
+            try:
+                file.write(sep.join(safe_args) + end)
+            except Exception:
+                # fallback to repr
+                print(*[repr(a) for a in args], **{k: v for k, v in kwargs.items() if k != 'file'})
+        except Exception:
+            try:
+                print(*[repr(a) for a in args], **{k: v for k, v in kwargs.items() if k != 'file'})
+            except Exception:
+                pass
 
 def format_number(n):
     """Format number with commas"""
@@ -117,8 +147,8 @@ def run_preprocessing():
     preprocessing_status['completed'] = False
     
     try:
-        # Get current working directory
-        cwd = Path.cwd()
+        # Resolve paths from the app root (stable on Windows)
+        cwd = Path(app.root_path)
         script_path = cwd / 'phase1_preprocessing.py'
         
         if not script_path.exists():
@@ -132,33 +162,37 @@ def run_preprocessing():
         preprocessing_status['progress'] = 20
         preprocessing_status['message'] = 'Executing preprocessing script...'
         
-        print(f"Running preprocessing script from: {cwd}")
-        print(f"Script path: {script_path}")
-        print(f"CSV files in data folder: {list(DATA_DIR.glob('*.csv'))}")
+        safe_print(f"Running preprocessing script from: {cwd}")
+        safe_print(f"Script path: {script_path}")
+        safe_print(f"CSV files in data folder: {list(DATA_DIR.glob('*.csv'))}")
         
         # Run preprocessing script and capture output
         preprocessing_status['current_step'] = 'Running preprocessing...'
         preprocessing_status['progress'] = 30
         
-        print("Executing subprocess...")
+        safe_print("Executing subprocess...")
+        # Use 'python' for Windows/cross-platform compatibility
+        import sys
+        python_executable = sys.executable
+        
         result = subprocess.run(
-            ['python3', str(script_path)],
+            [python_executable, str(script_path)],
             cwd=str(cwd),
             capture_output=True,
             text=True,
             timeout=3600
         )
         
-        print(f"Subprocess completed with return code: {result.returncode}")
-        print(f"STDOUT length: {len(result.stdout) if result.stdout else 0}")
-        print(f"STDERR length: {len(result.stderr) if result.stderr else 0}")
+        safe_print(f"Subprocess completed with return code: {result.returncode}")
+        safe_print(f"STDOUT length: {len(result.stdout) if result.stdout else 0}")
+        safe_print(f"STDERR length: {len(result.stderr) if result.stderr else 0}")
         
         if result.stdout:
-            print("=== STDOUT (last 1000 chars) ===")
-            print(result.stdout[-1000:])
+            safe_print("=== STDOUT (last 1000 chars) ===")
+            safe_print(result.stdout[-1000:])
         if result.stderr:
-            print("=== STDERR (last 1000 chars) ===")
-            print(result.stderr[-1000:])
+            safe_print("=== STDERR (last 1000 chars) ===")
+            safe_print(result.stderr[-1000:])
         
         output_lines = result.stdout.split('\n') if result.stdout else []
         
@@ -167,8 +201,8 @@ def run_preprocessing():
             error_msg = result.stderr or result.stdout or 'Unknown error'
             preprocessing_status['message'] = f'Preprocessing failed: {error_msg[-200:]}'
             preprocessing_status['current_step'] = f'Error (code {result.returncode})'
-            print(f"Preprocessing failed with code {result.returncode}")
-            print(f"Full error: {error_msg}")
+            safe_print(f"Preprocessing failed with code {result.returncode}")
+            safe_print(f"Full error: {error_msg}")
             preprocessing_status['completed'] = False
             preprocessing_status['running'] = False
             return
@@ -182,24 +216,24 @@ def run_preprocessing():
         time.sleep(2)
         
         # Check if cleaned files were created
-        print(f"Checking for cleaned files in {DATA_DIR}...")
+        safe_print(f"Checking for cleaned files in {DATA_DIR}...")
         all_files_after = list(DATA_DIR.glob('*.csv'))
-        print(f"All CSV files after preprocessing: {[f.name for f in all_files_after]}")
+        safe_print(f"All CSV files after preprocessing: {[f.name for f in all_files_after]}")
         
         cleaned_files = list(DATA_DIR.glob('*_cleaned.csv'))
         cleaned_files.extend(list(DATA_DIR.glob('*-cleaned.csv')))
         cleaned_files = list(set(cleaned_files))
         
-        print(f"Cleaned files found: {[f.name for f in cleaned_files]}")
+        safe_print(f"Cleaned files found: {[f.name for f in cleaned_files]}")
         
         if not cleaned_files:
             preprocessing_status['message'] = 'Error: No cleaned files were created! Check logs.'
             preprocessing_status['completed'] = False
-            print("ERROR: No cleaned files were created")
-            print(f"Last 50 lines of output:\n{''.join(output_lines[-50:])}")
+            safe_print("ERROR: No cleaned files were created")
+            safe_print(f"Last 50 lines of output:\n{''.join(output_lines[-50:])}")
         else:
             preprocessing_status['message'] = f'Successfully created {len(cleaned_files)} cleaned file(s)'
-            print(f"Found {len(cleaned_files)} cleaned files: {[f.name for f in cleaned_files]}")
+            safe_print(f"Found {len(cleaned_files)} cleaned files: {[f.name for f in cleaned_files]}")
             
             # Parse actual results from output
             parse_preprocessing_output(output_lines, cleaned_files)
@@ -210,19 +244,19 @@ def run_preprocessing():
         
         # Force update stats immediately after completion
         update_stats_from_files()
-        print(f"Stats updated: {list(STATS.keys())}")
+        safe_print(f"Stats updated: {list(STATS.keys())}")
         
     except subprocess.TimeoutExpired:
         preprocessing_status['message'] = 'Preprocessing timed out after 1 hour'
         preprocessing_status['current_step'] = 'Timeout'
         preprocessing_status['completed'] = False
-        print("Preprocessing timed out")
+        safe_print("Preprocessing timed out")
     except Exception as e:
         error_msg = str(e)
         preprocessing_status['message'] = f'Error: {error_msg[:200]}'
         preprocessing_status['current_step'] = 'Error occurred'
         preprocessing_status['completed'] = False
-        print(f"Exception during preprocessing: {error_msg}")
+        safe_print(f"Exception during preprocessing: {error_msg}")
         import traceback
         traceback.print_exc()
     finally:
@@ -349,7 +383,7 @@ def parse_preprocessing_output(output_lines, cleaned_files):
             FEATURES_ENGINEERED[dataset_name] = engineered_features_list
             
         except Exception as e:
-            print(f"Error parsing stats for {dataset_name}: {e}")
+            safe_print(f"Error parsing stats for {dataset_name}: {e}")
             import traceback
             traceback.print_exc()
 
@@ -362,7 +396,7 @@ def update_stats_from_files():
     cleaned_files.extend(list(DATA_DIR.glob('*-cleaned.csv')))
     cleaned_files = list(set(cleaned_files))  # Remove duplicates
     
-    print(f"Updating stats from {len(cleaned_files)} cleaned files: {[f.name for f in cleaned_files]}")
+    safe_print(f"Updating stats from {len(cleaned_files)} cleaned files: {[f.name for f in cleaned_files]}")
     
     for cleaned_file in cleaned_files:
         dataset_name = cleaned_file.stem.replace('_cleaned', '').replace('-cleaned', '')
@@ -430,7 +464,7 @@ def update_stats_from_files():
                 {'feature': 'Packet_Ratio', 'type': 'Statistical', 'formula': 'packet count ratio', 'usefulness': 'Flow pattern detection'}
             ]
             
-            print(f"Loaded stats for {dataset_name}: {STATS[dataset_name]['final_rows']} rows, {STATS[dataset_name]['final_cols']} cols")
+            safe_print(f"Loaded stats for {dataset_name}: {STATS[dataset_name]['final_rows']} rows, {STATS[dataset_name]['final_cols']} cols")
             
         except Exception as e:
             print(f"Error updating stats for {dataset_name}: {e}")
@@ -450,6 +484,7 @@ def generate_html_head(title, include_sidebar=True):
                 <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="/upload"><i class="fas fa-upload"></i> Data Preprocessing</a></li>
                 <li><a href="/summary"><i class="fas fa-chart-bar"></i> Summary Report</a></li>
+                <li><a href="/wids"><i class="fas fa-shield-alt"></i> WIDS Detection</a></li>
             </ul>
         </div>
         """
@@ -764,16 +799,24 @@ def upload():
     global preprocessing_status
     
     if request.method == 'POST':
-        print("POST request received")
-        print(f"Form data: {request.form}")
-        print(f"Files: {request.files}")
+        safe_print("\n" + "="*60)
+        safe_print("POST REQUEST TO /UPLOAD - DETAILED DEBUG")
+        safe_print("="*60)
+        safe_print(f"[1] Request received at: {request.path}")
+        safe_print(f"[2] Form data: {dict(request.form)}")
+        safe_print(f"[3] Files: {dict(request.files)}")
+        safe_print(f"[4] Form keys: {list(request.form.keys())}")
         
-        # Check if preprocessing button was clicked FIRST
-        if 'preprocess' in request.form:
-            print("Preprocessing button clicked!")
+        # Check if preprocessing button was clicked
+        is_preprocessing = 'preprocess' in request.form
+        safe_print(f"[5] Is preprocessing: {is_preprocessing}")
+        
+        if is_preprocessing:
+            safe_print("[OK] Preprocessing button clicked!")
             
             # Handle any file uploads in the same request
             num_datasets = int(request.form.get('num_datasets', 1))
+            safe_print(f"[6] Number of datasets: {num_datasets}")
             uploaded_files = []
             
             for i in range(num_datasets):
@@ -785,27 +828,32 @@ def upload():
                         filepath = DATA_DIR / filename
                         file.save(filepath)
                         uploaded_files.append(filename)
-                        print(f"Saved file: {filename}")
+                        safe_print(f"[OK] Saved file: {filename}")
+            
+            safe_print(f"[7] Uploaded {len(uploaded_files)} files")
             
             # Check if we have CSV files (either just uploaded or already exist)
             csv_files = list(DATA_DIR.glob('*.csv'))
             csv_files = [f for f in csv_files if '_cleaned' not in f.name and '-cleaned' not in f.name]
             
-            print(f"Found {len(csv_files)} CSV files to process: {[f.name for f in csv_files]}")
+            safe_print(f"[8] Found {len(csv_files)} CSV files to process: {[f.name for f in csv_files]}")
             
             if not csv_files:
-                print("ERROR: No CSV files found!")
+                safe_print("[ERROR] No CSV files found!")
                 return jsonify({'error': 'Please upload at least one dataset file first'}), 400
             
             # Start preprocessing in background thread
-            print(f"Starting preprocessing thread for {len(csv_files)} files")
+            safe_print(f"[9] Starting preprocessing thread for {len(csv_files)} files")
             thread = threading.Thread(target=run_preprocessing)
             thread.daemon = True
             thread.start()
-            print("Thread started, redirecting...")
-            return redirect('/upload?processing=started')
+            safe_print("[OK] Thread started")
+            safe_print("[10] Redirecting to /upload?processing=started")
+            safe_print("="*60 + "\n")
+            return redirect(url_for('upload', processing='started'))
         
         # Handle file upload only (no preprocessing)
+        safe_print("[!] File upload only mode (no preprocessing)")
         num_datasets = int(request.form.get('num_datasets', 1))
         uploaded_files = []
         
@@ -818,9 +866,11 @@ def upload():
                     filepath = DATA_DIR / filename
                     file.save(filepath)
                     uploaded_files.append(filename)
-                    print(f"Saved file: {filename}")
+                    safe_print(f"[OK] Saved file: {filename}")
         
-        return redirect('/upload?uploaded=success')
+        safe_print(f"[11] Uploaded {len(uploaded_files)} files, redirecting...")
+        safe_print("="*60 + "\n")
+        return redirect(url_for('upload', uploaded='success'))
     
     # GET request - show upload form
     processing = request.args.get('processing', '')
@@ -859,6 +909,9 @@ def upload():
                         <!-- Dynamic upload fields will be inserted here -->
                     </div>
                     
+                    <!-- Hidden field to mark preprocessing request -->
+                    <input type="hidden" name="preprocess" value="1">
+                    
                     <div class="progress-container" id="progress-container" style="display: none;">
                         <div class="alert" id="status-alert">
                             <div id="status-message">Initializing...</div>
@@ -873,7 +926,7 @@ def upload():
                     </div>
                     
                     <div class="text-center mt-4">
-                        <button type="submit" name="preprocess" value="1" class="btn btn-primary btn-lg" id="preprocess-btn">
+                        <button type="submit" class="btn btn-primary btn-lg" id="preprocess-btn">
                             <i class="fas fa-cog"></i> Start Data Preprocessing
                         </button>
                     </div>
@@ -902,32 +955,25 @@ def upload():
             // Initialize on page load
             updateUploadFields();
             
-            // Handle form submission
+            // Handle form submission - show progress and let form submit
             document.getElementById('upload-form').addEventListener('submit', function(e) {{
+                console.log('Form submit event triggered');
+                
                 const btn = document.getElementById('preprocess-btn');
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 document.getElementById('progress-container').style.display = 'block';
+                document.getElementById('status-message').textContent = 'Submitting request and starting preprocessing...';
                 
-                // Start checking status (defer until function is available)
-                setTimeout(function(){{ if (window.checkStatus) {{ window.checkStatus(); }} }}, 1000);
-            }});
-
-            // Ensure "preprocess" is included even if button becomes disabled
-            const preprocessBtn = document.getElementById('preprocess-btn');
-            if (preprocessBtn) {{
-                preprocessBtn.addEventListener('click', function() {{
-                    let hidden = document.getElementById('preprocess-hidden');
-                    if (!hidden) {{
-                        hidden = document.createElement('input');
-                        hidden.type = 'hidden';
-                        hidden.name = 'preprocess';
-                        hidden.value = '1';
-                        hidden.id = 'preprocess-hidden';
-                        document.getElementById('upload-form').appendChild(hidden);
+                // Form has hidden preprocess=1 field, so it will trigger the right path
+                // Start checking status after delay
+                setTimeout(function(){{ 
+                    console.log('Attempting to check status');
+                    if (window.checkStatus) {{ 
+                        window.checkStatus(); 
                     }}
-                }});
-            }}
+                }}, 1500);
+            }});
             
             {f"if ('{processing}' === 'started') {{ setTimeout(function(){{ if (window.checkStatus) window.checkStatus(); }}, 1000); document.getElementById('progress-container').style.display = 'block'; }}" if processing == 'started' else ''}
         </script>
@@ -1261,14 +1307,334 @@ def summary():
     html += generate_html_foot()
     return Response(html, mimetype='text/html')
 
+def get_wids_results():
+    """Get WIDS analysis results"""
+    try:
+        wids = WebIntrusionDetectionSystem(
+            data_file='data/CIC-IDS-2017_cleaned.csv',
+            model_file='models/wids_iforest.pkl'
+        )
+        
+        # Load data
+        if not wids.load_data():
+            return None
+        
+        # Engineer features
+        if not wids.engineer_web_features():
+            return None
+        
+        # Prepare model data
+        X_scaled = wids.prepare_model_data()
+        if X_scaled is None:
+            return None
+        
+        # Train model
+        if not wids.train_anomaly_detector(X_scaled):
+            return None
+        
+        # Generate anomalies
+        wids.generate_anomaly_report()
+        
+        return wids
+    except Exception as e:
+        safe_print(f"[ERROR] Failed to get WIDS results: {e}")
+        return None
+
+@app.route('/wids')
+def wids_dashboard():
+    """Web Intrusion Detection System Dashboard"""
+    html = generate_html_head("Module 2: Web Intrusion Detection System (WIDS)")
+    
+    # Get WIDS results
+    wids = get_wids_results()
+    
+    if wids is None:
+        html += """
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> WIDS Error</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5>Failed to load WIDS data</h5>
+                    <p>Ensure CIC-IDS-2017_cleaned.csv exists in the data folder.</p>
+                </div>
+            </div>
+        </div>
+        """
+        html += generate_html_foot()
+        return Response(html, mimetype='text/html')
+    
+    # Summary cards
+    html += f"""
+        <div class="card">
+            <div class="card-header text-center">
+                <h1 class="display-4 mb-3"><i class="fas fa-shield-alt"></i> Web Intrusion Detection System</h1>
+                <p class="lead">Anomaly Detection Using Isolation Forest</p>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <div class="h3 mb-0">{format_number(wids.stats.get('total_requests', 0))}</div>
+                        <small class="text-white-50">Total Web Requests</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <div class="h3 mb-0">{format_number(wids.stats.get('anomalies_detected', 0))}</div>
+                        <small class="text-white-50">Anomalies Detected</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <div class="h3 mb-0">{wids.stats.get('anomaly_percentage', 0):.2f}%</div>
+                        <small class="text-dark-50">Anomaly Rate</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <div class="h3 mb-0">{'ALERT' if wids.stats.get('alert_triggered') else 'OK'}</div>
+                        <small class="text-white-50">System Status</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Model Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-cogs"></i> Model Configuration</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Algorithm:</strong> Isolation Forest</p>
+                        <p><strong>Estimators:</strong> 200 decision trees</p>
+                        <p><strong>Contamination Rate:</strong> 5%</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Features Used:</strong> 8 behavioral features</p>
+                        <p><strong>Dataset:</strong> CIC-IDS-2017 (cleaned)</p>
+                        <p><strong>Total Samples:</strong> {format_number(wids.stats.get('total_requests', 0))}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Feature Engineering -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-cube"></i> Engineered Features (8)</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Feature Name</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>request_count</strong></td>
+                            <td>Number of requests in flow group (window-based aggregation)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>unique_dst_ports</strong></td>
+                            <td>Unique destination ports accessed in flow group</td>
+                        </tr>
+                        <tr>
+                            <td><strong>mean_bytes_sent</strong></td>
+                            <td>Average bytes sent per flow in group</td>
+                        </tr>
+                        <tr>
+                            <td><strong>mean_bytes_received</strong></td>
+                            <td>Average bytes received per flow in group</td>
+                        </tr>
+                        <tr>
+                            <td><strong>request_rate</strong></td>
+                            <td>Requests per second (flow frequency metric)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>duration_mean</strong></td>
+                            <td>Average flow duration in group</td>
+                        </tr>
+                        <tr>
+                            <td><strong>packet_count_mean</strong></td>
+                            <td>Average packet count per flow</td>
+                        </tr>
+                        <tr>
+                            <td><strong>byte_ratio</strong></td>
+                            <td>Ratio of sent to received bytes (communication pattern)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Detection Results -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-chart-pie"></i> Detection Results</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Flow Classification</h5>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Normal Flows</span>
+                                <span><strong>{wids.stats.get('total_requests', 0) - wids.stats.get('anomalies_detected', 0):,}</strong></span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {100 - wids.stats.get('anomaly_percentage', 0):.1f}%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Anomalous Flows</span>
+                                <span><strong>{format_number(wids.stats.get('anomalies_detected', 0))}</strong></span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-danger" role="progressbar" 
+                                     style="width: {wids.stats.get('anomaly_percentage', 0):.1f}%">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Statistics</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <strong>Detection Rate:</strong> {wids.stats.get('anomaly_percentage', 0):.2f}%
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Precision:</strong> 5.00% (configured contamination)
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Isolation Forest Trees:</strong> 200
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Feature Scaling:</strong> StandardScaler (z-score normalized)
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Anomalous Records -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-exclamation-circle"></i> Sample Anomalous Records (Top 10)</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Request Count</th>
+                                <th>Unique Dst Ports</th>
+                                <th>Mean Bytes Sent</th>
+                                <th>Byte Ratio</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    """
+    
+    # Add sample anomalies
+    if hasattr(wids, 'df') and wids.df is not None:
+        anomalies = wids.df[wids.df['is_anomaly'] == 1]
+        sample_cols = ['request_count', 'unique_dst_ports', 'mean_bytes_sent', 'byte_ratio']
+        
+        for idx, (_, row) in enumerate(anomalies.iloc[:min(10, len(anomalies))].iterrows()):
+            byte_ratio = row.get('byte_ratio', 1.0)
+            risk = 'HIGH' if byte_ratio > 2 else 'MEDIUM' if byte_ratio > 1 else 'LOW'
+            html += f"""
+                            <tr>
+                                <td>{int(row.get('request_count', 0))}</td>
+                                <td>{int(row.get('unique_dst_ports', 0))}</td>
+                                <td>{row.get('mean_bytes_sent', 0):.2f}</td>
+                                <td>{byte_ratio:.2f}</td>
+                                <td><span class="badge bg-danger">{risk}</span></td>
+                            </tr>
+            """
+    
+    html += """
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alert Logic -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-bell"></i> Alert & Threshold Logic</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5>Alerting Mechanism</h5>
+                    <p>The system uses threshold-based alerting to detect abnormal traffic patterns:</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><strong>Current Metrics</strong></h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                Anomaly Rate: <strong>{wids.stats.get('anomaly_percentage', 0):.2f}%</strong>
+                            </li>
+                            <li class="list-group-item">
+                                Alert Threshold: <strong>5.00%</strong>
+                            </li>
+                            <li class="list-group-item">
+                                Status: <span class="badge bg-{'danger' if wids.stats.get('alert_triggered') else 'success'}">
+                                    {'ALERT TRIGGERED' if wids.stats.get('alert_triggered') else 'NORMAL'}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><strong>Alert Decision Tree</strong></h6>
+                        <div class="alert alert-light border">
+                            <small>
+                                IF anomaly_rate > 5.00% → <span class="text-danger"><strong>ALERT TRIGGERED</strong></span><br>
+                                THEN → Escalate to security team<br>
+                                ELSE → <span class="text-success"><strong>SYSTEM NORMAL</strong></span><br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;Continue monitoring
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="/" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    """
+    
+    html += generate_html_foot()
+    return Response(html, mimetype='text/html')
+
 if __name__ == '__main__':
     # Initialize stats on startup
     update_stats_from_files()
     
-    print("="*60)
-    print("Phase 1 Data Preprocessing - Flask Web UI")
-    print("="*60)
-    print("Starting server on http://localhost:5006")
-    print("Press Ctrl+C to stop the server")
-    print("="*60)
+    safe_print("="*60)
+    safe_print("Phase 1 Data Preprocessing - Flask Web UI")
+    safe_print("="*60)
+    safe_print("Starting server on http://localhost:5006")
+    safe_print("Press Ctrl+C to stop the server")
+    safe_print("="*60)
     app.run(debug=True, host='0.0.0.0', port=5006)

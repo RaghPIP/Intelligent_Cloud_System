@@ -19,6 +19,11 @@ archive (1)/
 archive (2)/
 archive (3)/
 
+# Models (too large for GitHub)
+models/*.pkl
+models/*.h5
+models/*.joblib
+
 # System/editor
 .DS_Store
 .vscode/
