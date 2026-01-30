@@ -18,7 +18,8 @@ warnings.filterwarnings('ignore')
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.decomposition import PCA
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report
@@ -30,6 +31,8 @@ DATASET_PATH = 'data/NSL-KDD_cleaned.csv'
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
 N_ESTIMATORS = 100
+USE_PCA = True
+PCA_VARIANCE_THRESHOLD = 0.95  # Retain 95% of variance
 
 print("\n" + "="*90)
 print(" "*20 + "MODULE 1: NETWORK TRAFFIC CLASSIFIER")
@@ -129,6 +132,54 @@ for idx, label in enumerate(le_y.classes_):
     print(f"    • {str(label):20s} → {idx}  ({count:6,} samples, {percentage:5.2f}%)")
 
 # ============================================================================
+# TASK 2.5: PCA FOR DIMENSIONALITY REDUCTION (OPTIONAL)
+# ============================================================================
+print("\n" + "-"*90)
+print("TASK 2.5: PRINCIPAL COMPONENT ANALYSIS (PCA) - DIMENSIONALITY REDUCTION")
+print("-"*90)
+
+original_features = X.shape[1]
+
+if USE_PCA:
+    print(f"\n🔍 PCA CONFIGURATION:")
+    print("-" * 90)
+    print(f"  Original Features: {original_features}")
+    print(f"  Variance Retention Target: {PCA_VARIANCE_THRESHOLD*100:.1f}%")
+    
+    # Standardize features before PCA (required for PCA)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Fit PCA
+    pca = PCA(n_components=PCA_VARIANCE_THRESHOLD)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    n_components = pca.n_components_
+    explained_variance = pca.explained_variance_ratio_
+    cumsum_variance = np.cumsum(explained_variance)
+    
+    print(f"\n✓ PCA ANALYSIS RESULTS:")
+    print("-" * 90)
+    print(f"  Reduced Features: {n_components} (from {original_features})")
+    print(f"  Dimensionality Reduction: {((original_features - n_components) / original_features * 100):.2f}%")
+    print(f"  Total Variance Explained: {cumsum_variance[-1]*100:.2f}%")
+    
+    print(f"\n  📊 Variance Explained by Top 10 Components:")
+    print("-" * 90)
+    for i in range(min(10, n_components)):
+        bar_width = int(explained_variance[i] * 100 / 5)
+        bar = "█" * bar_width
+        print(f"    PC{i+1:2d}: {explained_variance[i]*100:6.2f}% │{bar}")
+    
+    # Use PCA-transformed data - Convert back to DataFrame
+    X = pd.DataFrame(X_pca, columns=[f"PC{i+1}" for i in range(n_components)])
+    X_scaled = None  # Clear to save memory
+    
+else:
+    print(f"\n⊘ PCA is DISABLED")
+    print(f"  Original feature space will be used ({original_features} features)")
+
+# ============================================================================
 # TASK 3: TRAIN-TEST SPLIT (SHOW OUTPUT)
 # ============================================================================
 print("\n" + "-"*90)
@@ -200,28 +251,7 @@ print("-" * 90)
 print(f"  Algorithm: Random Forest Classifier")
 print(f"  Number of Trees (Estimators): {N_ESTIMATORS}")
 print(f"  Training Samples: {X_train.shape[0]:,}")
-print(f"  Feature Dimension: {X_train.shape[1]}")
-
-print(f"\n✓ REASON FOR CHOOSING RANDOM FOREST:")
-print("-" * 90)
-print("""
-  1. ROBUSTNESS: Handles both numerical and categorical features effectively
-  
-  2. FEATURE IMPORTANCE: Identifies which network features are most indicative
-     of attacks (valuable for security analysis)
-  
-  3. NON-LINEAR RELATIONSHIPS: Captures complex patterns in network traffic
-     without requiring explicit feature engineering
-  
-  4. SCALABILITY: Efficient training and prediction on large datasets
-  
-  5. ENSEMBLE METHOD: Reduces overfitting by averaging multiple decision trees
-  
-  6. NO SCALING REQUIRED: Tree-based models are scale-invariant
-  
-  7. HANDLES IMBALANCE: Can work with imbalanced attack/normal samples
-""")
-
+print(f"  Feature Dimension: {X_train.shape[1]} {'(PCA-reduced)' if USE_PCA else '(Original)'}")
 print(f"\n🔄 TRAINING IN PROGRESS...")
 
 model = RandomForestClassifier(

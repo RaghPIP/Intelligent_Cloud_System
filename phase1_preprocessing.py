@@ -1,17 +1,3 @@
-#!/usr/bin/env python3
-"""
-Phase 1: Data Preprocessing for Intelligent Threat Detection System
-===================================================================
-
-This script performs comprehensive data preprocessing for:
-1. Network Traffic Classifier (NSL-KDD, UNSW-NB15, CIC-IDS-2017)
-2. Web Intrusion Detection System (HTTP Access Logs)
-3. Malware Analysis System (Binary Features)
-
-Author: Final Year Engineering Project
-Date: 2024
-"""
-
 import pandas as pd
 import numpy as np
 import os
@@ -556,7 +542,7 @@ class DataPreprocessor:
         preview_cols = list(df.columns[:10]) + (['Label'] if 'Label' in df.columns else [])
         safe_print(df[preview_cols].head(5).to_string())
         
-        return {
+        return {    
             'rows': len(df),
             'columns': len(df.columns),
             'numeric_features': len(numeric_cols),
